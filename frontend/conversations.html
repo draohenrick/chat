@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conversas - Dplay Bot</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+      <div class="position-sticky sidebar-sticky">
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="instances.html">Conexões</a></li>
+          <li class="nav-item"><a class="nav-link active" href="conversations.html">Conversas</a></li>
+          <li class="nav-item"><a class="nav-link" href="leads.html">Leads</a></li>
+          <li class="nav-item"><a class="nav-link" href="services.html">Configurar Bot</a></li>
+          <li class="nav-item"><a class="nav-link" href="usuarios.html">Usuários</a></li>
+          <li class="nav-item mt-auto"><a class="nav-link" href="account.html">Minha Conta</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" onclick="logout()">Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="page-header d-flex justify-content-between align-items-center my-3">
+        <h1>Conversas</h1>
+        <button class="btn btn-outline-light" onclick="loadConversations()">⟳ Atualizar</button>
+      </div>
+
+      <div class="row">
+        <!-- Lista de conversas -->
+        <div class="col-md-4">
+          <div class="list-group" id="conversationList">
+            <div class="text-center text-muted p-3">Carregando conversas...</div>
+          </div>
+        </div>
+
+        <!-- Chat -->
+        <div class="col-md-8">
+          <div class="card text-bg-dark shadow-sm mb-3">
+            <div class="card-header">
+              <h5 id="chatHeader">Selecione uma conversa</h5>
+            </div>
+            <div class="card-body" id="chatBody" style="height: 400px; overflow-y: auto;">
+              <div class="text-center text-muted">Nenhuma conversa selecionada</div>
+            </div>
+          </div>
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" id="chatInput" placeholder="Digite sua mensagem" disabled>
+            <button class="btn btn-primary" id="sendBtn" disabled>Enviar</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+protectPage();
+
+let selectedConversation = null;
+
+async function loadConversations() {
+  const token = localStorage.getItem('authToken');
+  const list = document.getElementById('conversationList');
+  list.innerHTML = `<div class="text-center text-muted p-3">Carregando conversas...</div>`;
+  try {
+    const res = await fetch('https://botdplay.onrender.com/api/conversations', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    list.innerHTML = '';
+    if (data.length === 0) {
+      list.innerHTML = `<div class="text-center text-muted p-3">Nenhuma conversa encontrada.</div>`;
+      return;
+    }
+    data.forEach(conv => {
+      const div = document.createElement('button');
+      div.className = 'list-group-item list-group-item-action';
+      div.textContent = `${conv.userName} (${conv.unread} novas)`;
+      div.onclick = () => selectConversation(conv._id, conv.userName);
+      list.appendChild(div);
+    });
+  } catch (err) {
+    list.innerHTML = `<div class="text-center text-danger p-3">Erro ao carregar conversas.</div>`;
+  }
+}
+
+async function selectConversation(id, name) {
+  selectedConversation = id;
+  document.getElementById('chatHeader').textContent = `Conversa com ${name}`;
+  document.getElementById('chatInput').disabled = false;
+  document.getElementById('sendBtn').disabled = false;
+  loadChatMessages(id);
+}
+
+async function loadChatMessages(conversationId) {
+  const token = localStorage.getItem('authToken');
+  const chatBody = document.getElementById('chatBody');
+  chatBody.innerHTML = `<div class="text-center text-muted">Carregando mensagens...</div>`;
+  try {
+    const res = await fetch(`https://botdplay.onrender.com/api/conversations/${conversationId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const messages = await res.json();
+    chatBody.innerHTML = '';
+    messages.forEach(msg => {
+      const div = document.createElement('div');
+      div.className = `mb-2 ${msg.fromAdmin ? 'text-end' : 'text-start'}`;
+      div.innerHTML = `<span class="badge bg-secondary">${msg.fromAdmin ? 'Você' : msg.userName}</span> ${msg.message}`;
+      chatBody.appendChild(div);
+    });
+    chatBody.scrollTop = chatBody.scrollHeight;
+  } catch (err) {
+    chatBody.innerHTML = `<div class="text-center text-danger">Erro ao carregar mensagens.</div>`;
+  }
+}
+
+document.getElementById('sendBtn').addEventListener('click', async () => {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message || !selectedConversation) return;
+  const token = localStorage.getItem('authToken');
+  try {
+    await fetch(`https://botdplay.onrender.com/api/conversations/${selectedConversation}/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ message })
+    });
+    input.value = '';
+    loadChatMessages(selectedConversation);
+  } catch (err) {
+    alert('Erro ao enviar mensagem.');
+  }
+});
+
+document.addEventListener('DOMContentLoaded', loadConversations);
+</script>
+</body>
+</html>

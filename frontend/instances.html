@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conexões - Dplay Bot</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+      <div class="position-sticky sidebar-sticky">
+        <ul class="nav flex-column">
+          <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link active" href="instances.html">Conexões</a></li>
+          <li class="nav-item"><a class="nav-link" href="conversations.html">Conversas</a></li>
+          <li class="nav-item"><a class="nav-link" href="leads.html">Leads</a></li>
+          <li class="nav-item"><a class="nav-link" href="services.html">Configurar Bot</a></li>
+          <li class="nav-item"><a class="nav-link" href="usuarios.html">Usuários</a></li>
+          <li class="nav-item mt-auto"><a class="nav-link" href="account.html">Minha Conta</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" onclick="logout()">Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="page-header d-flex justify-content-between align-items-center my-3">
+        <h1>Conexões</h1>
+        <button class="btn btn-outline-light" onclick="loadConnections()">⟳ Atualizar</button>
+      </div>
+
+      <div class="mb-4">
+        <button class="btn btn-success" onclick="addConnection()">➕ Nova Conexão</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-dark table-striped">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Status</th>
+              <th>Última Atividade</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="connectionsTable">
+            <tr><td colspan="5" class="text-center">Carregando conexões...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+protectPage();
+
+async function loadConnections() {
+  const token = localStorage.getItem('authToken');
+  const table = document.getElementById('connectionsTable');
+  table.innerHTML = `<tr><td colspan="5" class="text-center">Carregando conexões...</td></tr>`;
+  try {
+    const res = await fetch('https://botdplay.onrender.com/api/connections', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    table.innerHTML = '';
+    if (data.length === 0) {
+      table.innerHTML = `<tr><td colspan="5" class="text-center">Nenhuma conexão encontrada.</td></tr>`;
+      return;
+    }
+    data.forEach(conn => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${conn._id}</td>
+        <td>${conn.name}</td>
+        <td class="${conn.online ? 'text-success' : 'text-danger'}">${conn.online ? 'Online' : 'Offline'}</td>
+        <td>${new Date(conn.lastActivity).toLocaleString()}</td>
+        <td>
+          <button class="btn btn-sm btn-primary" onclick="editConnection('${conn._id}')">✏️ Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteConnection('${conn._id}')">🗑️ Excluir</button>
+        </td>
+      `;
+      table.appendChild(tr);
+    });
+  } catch(err) {
+    table.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro ao carregar conexões.</td></tr>`;
+  }
+}
+
+function addConnection() {
+  const name = prompt('Digite o nome da nova conexão:');
+  if (!name) return;
+  const token = localStorage.getItem('authToken');
+  fetch('https://botdplay.onrender.com/api/connections', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ name })
+  }).then(() => loadConnections());
+}
+
+function editConnection(id) {
+  const newName = prompt('Digite o novo nome da conexão:');
+  if (!newName) return;
+  const token = localStorage.getItem('authToken');
+  fetch(`https://botdplay.onrender.com/api/connections/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ name: newName })
+  }).then(() => loadConnections());
+}
+
+function deleteConnection(id) {
+  if (!confirm('Deseja realmente excluir esta conexão?')) return;
+  const token = localStorage.getItem('authToken');
+  fetch(`https://botdplay.onrender.com/api/connections/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  }).then(() => loadConnections());
+}
+
+document.addEventListener('DOMContentLoaded', loadConnections);
+</script>
+</body>
+</html>

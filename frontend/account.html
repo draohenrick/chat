@@ -1,0 +1,125 @@
+const BACKEND_URL = 'https://botdplay.onrender.com';
+
+// Elementos do formulário
+const accountForm = document.getElementById('account-form');
+const nameInput = document.getElementById('account-name');
+const emailInput = document.getElementById('account-email');
+const passwordForm = document.getElementById('password-form');
+const currentPassword = document.getElementById('current-password');
+const newPassword = document.getElementById('new-password');
+const confirmPassword = document.getElementById('confirm-password');
+const darkModeSwitch = document.getElementById('darkModeSwitch');
+const notificationsSwitch = document.getElementById('notificationsSwitch');
+
+// Mensagem temporária
+function showMessage(form, message, type = 'success') {
+  let msg = form.querySelector('.form-message');
+  if (!msg) {
+    msg = document.createElement('div');
+    msg.className = 'form-message mt-2';
+    form.appendChild(msg);
+  }
+  msg.textContent = message;
+  msg.className = `form-message mt-2 text-${type}`;
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+}
+
+// --- Buscar dados do usuário ---
+async function loadAccountData() {
+  const token = localStorage.getItem('authToken');
+  if (!token) return logout();
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/account/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Erro ao carregar dados.');
+    const data = await res.json();
+    nameInput.value = data.nome || '';
+    emailInput.value = data.email || '';
+    darkModeSwitch.checked = data.preferences?.darkMode ?? true;
+    notificationsSwitch.checked = data.preferences?.notifications ?? true;
+  } catch (err) {
+    console.error(err);
+    logout();
+  }
+}
+
+// --- Salvar alterações de perfil ---
+accountForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const token = localStorage.getItem('authToken');
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/account/update`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ nome: nameInput.value })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao atualizar perfil.');
+    showMessage(accountForm, 'Perfil atualizado com sucesso!', 'success');
+  } catch (err) {
+    showMessage(accountForm, err.message, 'danger');
+  }
+});
+
+// --- Alterar senha ---
+async function changePassword() {
+  if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
+    showMessage(passwordForm, 'Preencha todos os campos de senha.', 'danger');
+    return;
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    showMessage(passwordForm, 'As senhas não coincidem.', 'danger');
+    return;
+  }
+  const token = localStorage.getItem('authToken');
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/account/change-password`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        currentPassword: currentPassword.value,
+        newPassword: newPassword.value
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao alterar senha.');
+    showMessage(passwordForm, 'Senha atualizada com sucesso!', 'success');
+    passwordForm.reset();
+  } catch (err) {
+    showMessage(passwordForm, err.message, 'danger');
+  }
+}
+
+// --- Salvar preferências ---
+async function savePreferences() {
+  const token = localStorage.getItem('authToken');
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/account/preferences`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        darkMode: darkModeSwitch.checked,
+        notifications: notificationsSwitch.checked
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao salvar preferências.');
+    showMessage(preferencesForm, 'Preferências salvas com sucesso!', 'success');
+  } catch (err) {
+    showMessage(preferencesForm, err.message, 'danger');
+  }
+}
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', loadAccountData);

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Configurar Bot - Dplay Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+            <div class="position-sticky sidebar-sticky">
+                <div class="text-center my-4">
+                    <h6 class="sidebar-heading px-3 text-dark"><span>Dplay Bot</span></h6>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="instances.html">Conexões</a></li>
+                    <li class="nav-item"><a class="nav-link" href="conversations.html">Conversas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="leads.html">Leads</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="services.html">Configurar Bot</a></li>
+                    <li class="nav-item"><a class="nav-link" href="usuarios.html">Usuários</a></li>
+                    <li class="nav-item mt-auto"><a class="nav-link" href="account.html">Minha Conta</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="logout()">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
+    
+        <!-- Main -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="page-header d-flex justify-content-between align-items-center my-3">
+                <h1>Configurar Bot</h1>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+                    + Novo Fluxo
+                </button>
+            </div>
+            
+            <p>Gerencie os serviços, fluxos e respostas automáticas do seu bot.</p>
+
+            <!-- Services List -->
+            <div class="card">
+                <div class="card-body">
+                    <div id="services-container" class="table-responsive">
+                        <table class="table table-dark table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nome do Fluxo</th>
+                                    <th>Descrição</th>
+                                    <th>Palavras-chave</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="servicesTableBody">
+                                <tr><td colspan="4" class="text-center">Carregando fluxos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Novo Serviço -->
+            <div class="modal fade" id="addServiceModal" tabindex="-1" aria-labelledby="addServiceLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content bg-dark text-light">
+                        <div class="modal-header border-secondary">
+                            <h5 class="modal-title" id="addServiceLabel">Criar Novo Fluxo do Bot</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form id="newServiceForm">
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="serviceLabel" class="form-label">Nome do Fluxo (Menu)</label>
+                                    <input type="text" id="serviceLabel" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="serviceDescription" class="form-label">Descrição</label>
+                                    <textarea id="serviceDescription" class="form-control" rows="2" required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="serviceKeywords" class="form-label">Palavras-chave (separadas por vírgula)</label>
+                                    <input type="text" id="serviceKeywords" class="form-control" placeholder="ex: ajuda, atendente, falar com humano">
+                                </div>
+                            </div>
+                            <div class="modal-footer border-secondary">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-success">Salvar Fluxo</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+      </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/services.js"></script>
+    <script>
+        protectPage();
+
+        const servicesTableBody = document.getElementById('servicesTableBody');
+        const newServiceForm = document.getElementById('newServiceForm');
+
+        // Mock de serviços
+        let mockServices = [
+            { label: "Atendimento", description: "Fluxo inicial de atendimento ao cliente", keywords: "ajuda, atendimento, suporte" },
+            { label: "Vendas", description: "Fluxo de vendas e negociação", keywords: "comprar, preço, orçamento" }
+        ];
+
+        function loadServices() {
+            servicesTableBody.innerHTML = '';
+            if (mockServices.length === 0) {
+                servicesTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum fluxo encontrado.</td></tr>';
+                return;
+            }
+            mockServices.forEach((service, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${service.label}</td>
+                    <td>${service.description}</td>
+                    <td>${service.keywords}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-1" onclick="editService(${index})">✏️ Editar</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteService(${index})">🗑️ Excluir</button>
+                    </td>
+                `;
+                servicesTableBody.appendChild(tr);
+            });
+        }
+
+        newServiceForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const label = document.getElementById('serviceLabel').value.trim();
+            const description = document.getElementById('serviceDescription').value.trim();
+            const keywords = document.getElementById('serviceKeywords').value.trim();
+            mockServices.push({ label, description, keywords });
+            loadServices();
+            new bootstrap.Modal(document.getElementById('addServiceModal')).hide();
+            newServiceForm.reset();
+        });
+
+        function editService(index) {
+            const service = mockServices[index];
+            document.getElementById('serviceLabel').value = service.label;
+            document.getElementById('serviceDescription').value = service.description;
+            document.getElementById('serviceKeywords').value = service.keywords;
+            const modal = new bootstrap.Modal(document.getElementById('addServiceModal'));
+            modal.show();
+
+            // Atualizar ao salvar
+            newServiceForm.onsubmit = (e) => {
+                e.preventDefault();
+                mockServices[index] = {
+                    label: document.getElementById('serviceLabel').value.trim(),
+                    description: document.getElementById('serviceDescription').value.trim(),
+                    keywords: document.getElementById('serviceKeywords').value.trim()
+                };
+                loadServices();
+                modal.hide();
+                newServiceForm.reset();
+                // Restaura submit padrão
+                newServiceForm.onsubmit = defaultSubmit;
+            };
+        }
+
+        function deleteService(index) {
+            if (confirm("Deseja realmente excluir este fluxo?")) {
+                mockServices.splice(index, 1);
+                loadServices();
+            }
+        }
+
+        const defaultSubmit = newServiceForm.onsubmit;
+
+        document.addEventListener('DOMContentLoaded', loadServices);
+    </script>
+</body>
+</html>
